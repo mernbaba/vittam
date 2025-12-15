@@ -1,33 +1,15 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { connectDB } from "@/lib/mongodb";
+import { OfferTemplate } from "@/models/OfferTemplate";
 
 export async function GET() {
-  try {
-    const client = await clientPromise;
-    const db = client.db("Vittam");
+  await connectDB();
 
-    const offers = await db
-      .collection("offer_template")
-      .find({ active: true })
-      .project({
-        _id: 0,
-        name: 1,
-        min_credit_score: 1,
-        max_credit_score: 1,
-        min_amount: 1,
-        max_amount: 1,
-        min_tenure_months: 1,
-        max_tenure_months: 1,
-        base_rate: 1,
-        processing_fee_pct: 1,
-      })
-      .toArray();
+  const offers = await OfferTemplate.find({ active: true })
+    .select(
+      "name min_credit_score max_credit_score min_amount max_amount min_tenure_months max_tenure_months base_rate processing_fee_pct active"
+    )
+    .lean();
 
-    return NextResponse.json({ success: true, offers });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch offers" },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ success: true, offers });
 }
