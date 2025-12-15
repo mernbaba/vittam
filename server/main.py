@@ -15,14 +15,13 @@ Requirements:
 import os
 import json
 import logging
+import uuid
 from typing import Optional
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
-
-# Import services
 from services import (
     verify_kyc_details, verify_pan, verify_phone, verify_otp,
     fetch_credit_score, get_pre_approved_limit, calculate_emi,
@@ -30,6 +29,9 @@ from services import (
     get_customer_by_id, get_customer_by_phone, get_customer_by_pan,
     get_interest_rate
 )
+from session_service import create_session, get_session, update_session
+from conversation_service import create_conversation
+from models import SessionMetadata
 
 load_dotenv()
 
@@ -65,6 +67,9 @@ session_state = {
     "customer_data": None,
     "conversation_history": []  # Store full conversation history
 }
+
+# Current session ID (None means no active session)
+current_session_id: Optional[str] = None
 
 
 # ==================== SALES AGENT TOOLS ====================
@@ -275,6 +280,8 @@ def verify_customer_kyc(name: str, dob: str, address: str, pan: str) -> str:
         session_state["customer_id"] = result["customer_id"]
         session_state["customer_data"] = result["customer_data"]
         session_state["conversation_stage"] = "verification"
+        # Update session in database
+        sync_session_to_db()
         logger.info(f"[TOOL] verify_customer_kyc - KYC verified for customer: {result['customer_id']}")
     else:
         logger.warning(f"[TOOL] verify_customer_kyc - KYC verification failed")
@@ -297,6 +304,8 @@ def verify_customer_pan(pan: str) -> str:
             session_state["customer_id"] = result["customer_id"]
             session_state["customer_data"] = customer
             session_state["conversation_stage"] = "verification"
+            # Update session in database
+            sync_session_to_db()
             logger.info(f"[TOOL] verify_customer_pan - PAN verified for customer: {result['customer_id']}")
     else:
         logger.warning(f"[TOOL] verify_customer_pan - PAN verification failed")
@@ -319,6 +328,8 @@ def verify_customer_phone(phone: str) -> str:
             customer = get_customer_by_phone(phone)
             if customer:
                 session_state["customer_data"] = customer
+        # Update session in database
+        sync_session_to_db()
         logger.info(f"[TOOL] verify_customer_phone - OTP sent to {phone} for customer: {result.get('customer_id')}")
     else:
         logger.warning(f"[TOOL] verify_customer_phone - Phone verification failed")
@@ -337,6 +348,8 @@ def verify_customer_otp(phone: str, otp: str) -> str:
     result = verify_otp(phone, otp)
     if result["verified"]:
         session_state["conversation_stage"] = "underwriting"
+        # Update session in database
+        sync_session_to_db()
         logger.info(f"[TOOL] verify_customer_otp - OTP verified successfully")
     else:
         logger.warning(f"[TOOL] verify_customer_otp - OTP verification failed")
@@ -397,6 +410,8 @@ def check_loan_eligibility(customer_id: str, requested_amount: float, tenure_mon
         else:
             session_state["conversation_stage"] = "underwriting"
             logger.info(f"[TOOL] check_loan_eligibility - Loan CONDITIONALLY APPROVED for customer: {customer_id}")
+        # Update session in database
+        sync_session_to_db()
     else:
         logger.warning(f"[TOOL] check_loan_eligibility - Loan REJECTED for customer: {customer_id}, reason: {result.get('reason', 'N/A')}")
     return json.dumps(result, indent=2)
@@ -438,6 +453,8 @@ def verify_salary_slip_upload(customer_id: str, uploaded: bool = True) -> str:
             )
             if eligibility["status"] == "approved":
                 session_state["conversation_stage"] = "sanction"
+                # Update session in database
+                sync_session_to_db()
                 logger.info(f"[TOOL] verify_salary_slip_upload - Loan approved after salary slip verification")
     else:
         logger.warning(f"[TOOL] verify_salary_slip_upload - Salary slip verification failed")
@@ -459,6 +476,8 @@ def generate_loan_sanction_letter(customer_id: str, loan_amount: float,
     result = generate_sanction_letter(customer_id, loan_amount, tenure_months, interest_rate)
     if result["success"]:
         session_state["conversation_stage"] = "sanction"
+        # Update session in database
+        sync_session_to_db()
         logger.info(f"[TOOL] generate_loan_sanction_letter - Sanction letter generated successfully for customer: {customer_id}")
     else:
         logger.error(f"[TOOL] generate_loan_sanction_letter - Failed to generate sanction letter")
@@ -876,11 +895,43 @@ master_agent = create_agent(
 )
 
 
+# ==================== DATABASE INTEGRATION ====================
+
+def sync_session_to_db():
+    """Sync session_state to database"""
+    if not current_session_id:
+        return
+    metadata: SessionMetadata = {
+        "customer_id": session_state.get("customer_id"),
+        "loan_amount": session_state.get("loan_amount"),
+        "tenure_months": session_state.get("tenure_months"),
+        "conversation_stage": session_state.get("conversation_stage"),
+        "customer_data": session_state.get("customer_data")
+    }
+    update_session(current_session_id, metadata=metadata, conversation_stage=session_state.get("conversation_stage"))
+
+
+def initialize_session(session_id: Optional[str] = None) -> str:
+    """Initialize or resume session"""
+    global current_session_id, session_state
+    if session_id and (s := get_session(session_id)):
+        current_session_id = session_id
+        m = s.get("metadata", {})
+        session_state.update({k: m.get(k) for k in ["customer_id", "loan_amount", "tenure_months", "conversation_stage", "customer_data"]})
+        session_state.setdefault("tenure_months", 60)
+        session_state.setdefault("conversation_stage", "initial")
+        return session_id
+    new_id = session_id or str(uuid.uuid4())
+    create_session(new_id, {"conversation_stage": "initial", "tenure_months": 60}, True)
+    current_session_id = new_id
+    return new_id
+
+
 # ==================== CLI INTERFACE ====================
 
 def reset_session():
     """Reset session state for new conversation."""
-    global session_state
+    global session_state, current_session_id
     session_state = {
         "customer_id": None,
         "loan_amount": None,
@@ -889,6 +940,8 @@ def reset_session():
         "customer_data": None,
         "conversation_history": []
     }
+    # Create a new session in database
+    current_session_id = initialize_session()
 
 
 def update_master_agent_prompt():
@@ -914,7 +967,9 @@ def main():
     print("Type 'reset' to start a new conversation.")
     print("=" * 80 + "\n")
     
+    # Initialize session (creates new session in database)
     reset_session()
+    print(f"[New session started: {current_session_id}]\n")
     
     while True:
         try:
@@ -938,6 +993,10 @@ def main():
                 print("\n[Session reset. Starting fresh conversation.]\n")
                 continue
             
+            if not current_session_id:
+                initialize_session()
+            create_conversation(current_session_id, "user", user_input)
+            
             # Add user message to conversation history
             user_message = HumanMessage(content=user_input)
             session_state["conversation_history"].append(user_message)
@@ -952,6 +1011,7 @@ def main():
             print("\n[Processing...]")
             logger.info(f"[AGENT] Master Agent called - User input: {user_input[:100]}...")
             logger.info(f"[AGENT] Master Agent - Conversation history length: {len(session_state['conversation_history'])} messages")
+            logger.info(f"[AGENT] Master Agent - Session ID: {current_session_id}")
             
             # Invoke master agent with FULL conversation history
             result = master_agent.invoke({"messages": session_state["conversation_history"]})
@@ -993,12 +1053,18 @@ def main():
             if not response:
                 response = str(result)
             
+            create_conversation(current_session_id, "assistant", response, "master")
+            
             # Add assistant response to history
             if response:
                 session_state["conversation_history"].append(AIMessage(content=response))
                 logger.info(f"[AGENT] Master Agent completed - Response length: {len(response)} characters")
             
+            # Sync session state to database
+            sync_session_to_db()
+            
             print(f"\nAssistant: {response}\n")
+            print(f"[Session ID: {current_session_id}]\n")
             print("-" * 80 + "\n")
             
         except KeyboardInterrupt:
