@@ -14,11 +14,25 @@ import { Button } from "@/components/ui/button";
 
 export default function UsersPanel() {
   const [users, setUsers] = useState([]);
+   const [loading, setLoading] = useState(false);
+
+const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/users", {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      setUsers(data.users);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/users")
-      .then(res => res.json())
-      .then(data => setUsers(data.users));
+    fetchUsers();
   }, []);
 
  return (
@@ -30,13 +44,18 @@ export default function UsersPanel() {
       </h1>
 
       <Button
-        variant="outline"
-        className="border-teal-600 text-teal-700 hover:bg-teal-50"
-        onClick={() => window.location.reload()}
-      >
-        <RefreshCcw className="h-4 w-4 mr-2" />
-        Refresh
-      </Button>
+          variant="outline"
+          className="border-teal-600 text-teal-700 hover:bg-teal-50"
+          onClick={fetchUsers}
+          disabled={loading}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 mr-2 ${
+              loading ? "animate-spin" : ""
+            }`}
+          />
+          {loading ? "Refreshing..." : "Refresh"}
+        </Button>
     </div>
 
     {/* Table */}
@@ -93,21 +112,21 @@ export default function UsersPanel() {
                       <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
                     </summary>
 
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-1 space-y-1">
                       {u.current_loans.map(
                         (loan: any, idx: number) => (
                           <div
                             key={idx}
-                            className="rounded-lg bg-[#FDF6EE] p-2 text-xs"
+                            className="rounded-lg bg-[#FDF6EE] px-2 py-1 text-xs leading-tight"
                           >
-                            <p className="font-medium">
+                            <p className="font-medium leading-tight">
                               {loan.type}
                             </p>
-                            <p>
+                            <p className="leading-tight">
                               EMI: ₹
                               {loan.emi.toLocaleString()}
                             </p>
-                            <p>
+                            <p className="leading-tight">
                               Outstanding: ₹
                               {loan.outstanding.toLocaleString()}
                             </p>

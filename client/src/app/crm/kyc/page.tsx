@@ -15,11 +15,25 @@ import { Badge } from "@/components/ui/badge";
 
 export default function KycPanel() {
   const [kyc, setKyc] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchKyc = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/kyc", {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      setKyc(data.kyc);
+    } catch (err) {
+      console.error("Failed to fetch KYC", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/kyc")
-      .then(res => res.json())
-      .then(data => setKyc(data.kyc));
+    fetchKyc();
   }, []);
 
   const getCreditBadge = (score: number) => {
@@ -42,13 +56,18 @@ export default function KycPanel() {
       </h1>
 
       <Button
-        variant="outline"
-        className="border-teal-600 text-teal-700 hover:bg-teal-50"
-        onClick={() => window.location.reload()}
-      >
-        <RefreshCcw className="h-4 w-4 mr-2" />
-        Refresh
-      </Button>
+          variant="outline"
+          className="border-teal-600 text-teal-700 hover:bg-teal-50"
+          onClick={fetchKyc}
+          disabled={loading}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 mr-2 ${
+              loading ? "animate-spin" : ""
+            }`}
+          />
+          {loading ? "Refreshing..." : "Refresh"}
+        </Button>
     </div>
 
     {/* Table */}

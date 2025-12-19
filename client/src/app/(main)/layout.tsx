@@ -48,7 +48,7 @@ export default function MainLayout({
         }}
       />
       <script
-        src="http://localhost:5173/chat-widget.js"
+        src={process.env.NEXT_PUBLIC_CHAT_WIDGET_URL!}
         data-bot-id="acme"
         data-position="bottom-right"
         data-width="360"

@@ -1,21 +1,53 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function OffersPanel() {
   const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchOffers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/offers", {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      setOffers(data.offers);
+    } catch (err) {
+      console.error("Failed to fetch offers", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/offers")
-      .then(res => res.json())
-      .then(data => setOffers(data.offers));
-  }, []);
+    fetchOffers();
+  }, []); 
 
  return (
   <div>
-    <h1 className="text-3xl font-bold text-teal-800 mb-6">
+    <div className="flex items-center justify-between mb-6">
+      <h1 className="text-3xl font-bold text-teal-800">
       Loan Offers
     </h1>
+
+    <Button
+          variant="outline"
+          className="border-teal-600 text-teal-700 hover:bg-teal-50"
+          onClick={fetchOffers}
+          disabled={loading}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 mr-2 ${
+              loading ? "animate-spin" : ""
+            }`}
+          />
+          {loading ? "Refreshing..." : "Refresh"}
+        </Button>
+    </div>
 
     <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
       {offers.map((o: any, i) => (

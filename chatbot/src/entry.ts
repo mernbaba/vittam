@@ -8,7 +8,7 @@ import { mountWidget, unmountWidget, sendMessageToWidget } from "./widget/mounte
     if (!scriptEl) {
       const scripts = document.getElementsByTagName("script");
       for (let i = scripts.length - 1; i >= 0; --i) {
-        if (scripts[i].src && scripts[i].src.includes("chat-widget.iife.js")) {
+        if (scripts[i].src && scripts[i].src.includes("chat-widget.js")) {
           scriptEl = scripts[i] as HTMLScriptElement;
           break;
         }
