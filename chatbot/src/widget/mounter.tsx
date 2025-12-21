@@ -35,11 +35,25 @@ export function mountWidget(config: Config = {}) {
   hostEl.style.position = "fixed";
   hostEl.style.zIndex = "2147483647";
   // position bottom-right by default; you can adjust if you support other positions
+  // hostEl.style.right = "20px";
+  // hostEl.style.bottom = "20px";
+  // hostEl.style.width = `${width}px`;
+  // hostEl.style.height = `${height}px`;
+  // hostEl.style.pointerEvents = "auto";
+  const isMobile = window.innerWidth <= 640;
+
+if (isMobile) {
+  hostEl.style.inset = "0";
+  hostEl.style.width = "100vw";
+  hostEl.style.height = "100vh";
+  hostEl.style.borderRadius = "0";
+} else {
+  hostEl.style.width = `${width}px`;   // 360px
+  hostEl.style.height = `${height}px`; // 520px
   hostEl.style.right = "20px";
   hostEl.style.bottom = "20px";
-  hostEl.style.width = `${width}px`;
-  hostEl.style.height = `${height}px`;
-  hostEl.style.pointerEvents = "auto";
+}
+
 
   document.body.appendChild(hostEl);
 
@@ -51,12 +65,22 @@ export function mountWidget(config: Config = {}) {
   link.rel = "stylesheet";
   link.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
   shadow.appendChild(link);
+  
+  const fontLink = document.createElement("link");
+fontLink.rel = "stylesheet";
+fontLink.href = "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap";
+shadow.appendChild(fontLink);
 
   // Small reset/style to ensure consistent rendering inside shadow root
   const style = document.createElement("style");
 style.textContent = `
   :host {
     all: initial;
+     display: block;
+  width: 100%;
+  height: 100%;
+   font-family: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
 
     /* Vittam Brand Theme */
     --v-bg: #fcf7ed;
@@ -86,6 +110,9 @@ shadow.appendChild(style);
   // Create mount point inside the shadow root
   const mountPoint = document.createElement("div");
   mountPoint.id = "chat-widget-mount";
+  mountPoint.style.width = "100%";
+mountPoint.style.height = "100%";
+mountPoint.style.display = "flex";
   shadow.appendChild(mountPoint);
 
   // Create React root and render wrapped with MemoryRouter

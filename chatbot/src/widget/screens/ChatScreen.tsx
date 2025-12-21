@@ -1,8 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router";
-import { Bot, User, Upload, Loader2 } from "lucide-react";
+import { User, Upload, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { InputSpec } from "../../services/api";
+import { IoSend } from "react-icons/io5";
+
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { RiCustomerService2Fill } from "react-icons/ri";
 
 type UploadedDocument = {
   name: string;
@@ -70,7 +74,7 @@ export default function ChatScreen(props: ScreenProps) {
 
   return (
     <div
-      className="w-full h-full flex flex-col"
+      className="w-full h-full min-h-0 flex flex-col"
       style={{ backgroundColor: "var(--v-bg)", color: "var(--v-text)" }}
     >
       {/* Messages Area */}
@@ -88,9 +92,12 @@ export default function ChatScreen(props: ScreenProps) {
               border: "1px solid var(--v-border)",
             }}
           >
-            <p className="text-sm leading-relaxed" style={{ color: "var(--v-muted)" }}>
-              I'll guide you from application to sanction using Vittam's AI-powered
-              sales agents.
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--v-muted)" }}
+            >
+              I'll guide you from application to sanction using Vittam's
+              AI-powered sales agents.
             </p>
           </div>
         ) : (
@@ -98,32 +105,28 @@ export default function ChatScreen(props: ScreenProps) {
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex gap-3 ${msg.who === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-3 ${
+                  msg.who === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 {msg.who === "bot" && (
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: "var(--v-primary-soft)" }}
                   >
-                    <Bot size={16} style={{ color: "var(--v-primary)" }} />
+                    <RiCustomerService2Fill size={16} style={{ color: "var(--v-primary)" }} />
                   </div>
                 )}
                 <div
                   className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                    msg.who === "user"
-                      ? "rounded-tr-sm"
-                      : "rounded-tl-sm"
+                    msg.who === "user" ? "rounded-tr-sm" : "rounded-tl-sm"
                   }`}
                   style={{
                     backgroundColor:
-                      msg.who === "user"
-                        ? "var(--v-primary)"
-                        : "var(--v-card)",
+                      msg.who === "user" ? "var(--v-primary)" : "var(--v-card)",
                     color: msg.who === "user" ? "white" : "var(--v-text)",
                     border:
-                      msg.who === "bot"
-                        ? "1px solid var(--v-border)"
-                        : "none",
+                      msg.who === "bot" ? "1px solid var(--v-border)" : "none",
                   }}
                 >
                   {msg.who === "bot" ? (
@@ -131,30 +134,48 @@ export default function ChatScreen(props: ScreenProps) {
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => (
-                            <p className="mb-2 last:mb-0" style={{ color: "var(--v-text)" }}>
+                            <p
+                              className="mb-2 last:mb-0"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </p>
                           ),
                           strong: ({ children }) => (
-                            <strong style={{ color: "var(--v-text)", fontWeight: 600 }}>
+                            <strong
+                              style={{
+                                color: "var(--v-text)",
+                                fontWeight: 600,
+                              }}
+                            >
                               {children}
                             </strong>
                           ),
                           em: ({ children }) => (
-                            <em style={{ color: "var(--v-text)" }}>{children}</em>
+                            <em style={{ color: "var(--v-text)" }}>
+                              {children}
+                            </em>
                           ),
                           ul: ({ children }) => (
-                            <ul className="list-disc list-inside mb-2 space-y-1" style={{ color: "var(--v-text)" }}>
+                            <ul
+                              className="list-disc list-inside mb-2 space-y-1"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className="list-decimal list-inside mb-2 space-y-1" style={{ color: "var(--v-text)" }}>
+                            <ol
+                              className="list-decimal list-inside mb-2 space-y-1"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </ol>
                           ),
                           li: ({ children }) => (
-                            <li style={{ color: "var(--v-text)" }}>{children}</li>
+                            <li style={{ color: "var(--v-text)" }}>
+                              {children}
+                            </li>
                           ),
                           code: ({ children, className }) => {
                             const isInline = !className;
@@ -181,7 +202,9 @@ export default function ChatScreen(props: ScreenProps) {
                             );
                           },
                           pre: ({ children }) => (
-                            <pre className="mb-2 overflow-x-auto">{children}</pre>
+                            <pre className="mb-2 overflow-x-auto">
+                              {children}
+                            </pre>
                           ),
                           blockquote: ({ children }) => (
                             <blockquote
@@ -206,22 +229,34 @@ export default function ChatScreen(props: ScreenProps) {
                             </a>
                           ),
                           h1: ({ children }) => (
-                            <h1 className="text-base font-semibold mb-2 mt-3 first:mt-0" style={{ color: "var(--v-text)" }}>
+                            <h1
+                              className="text-base font-semibold mb-2 mt-3 first:mt-0"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </h1>
                           ),
                           h2: ({ children }) => (
-                            <h2 className="text-sm font-semibold mb-2 mt-3 first:mt-0" style={{ color: "var(--v-text)" }}>
+                            <h2
+                              className="text-sm font-semibold mb-2 mt-3 first:mt-0"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </h2>
                           ),
                           h3: ({ children }) => (
-                            <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" style={{ color: "var(--v-text)" }}>
+                            <h3
+                              className="text-sm font-semibold mb-1 mt-2 first:mt-0"
+                              style={{ color: "var(--v-text)" }}
+                            >
                               {children}
                             </h3>
                           ),
                           hr: () => (
-                            <hr className="my-2" style={{ borderColor: "var(--v-border)" }} />
+                            <hr
+                              className="my-2"
+                              style={{ borderColor: "var(--v-border)" }}
+                            />
                           ),
                         }}
                       >
@@ -252,7 +287,7 @@ export default function ChatScreen(props: ScreenProps) {
                   className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: "var(--v-primary-soft)" }}
                 >
-                  <Bot size={16} style={{ color: "var(--v-primary)" }} />
+                  <RiCustomerService2Fill size={16} style={{ color: "var(--v-primary)" }} />
                 </div>
                 <div
                   className="rounded-2xl rounded-tl-sm px-4 py-2.5"
@@ -261,7 +296,11 @@ export default function ChatScreen(props: ScreenProps) {
                     border: "1px solid var(--v-border)",
                   }}
                 >
-                  <Loader2 size={16} className="animate-spin" style={{ color: "var(--v-primary)" }} />
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                    style={{ color: "var(--v-primary)" }}
+                  />
                 </div>
               </div>
             )}
@@ -276,10 +315,16 @@ export default function ChatScreen(props: ScreenProps) {
                 }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold" style={{ color: "var(--v-text)" }}>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--v-text)" }}
+                  >
                     Documents Required:
                   </p>
-                  <p className="text-xs font-medium" style={{ color: "var(--v-primary)" }}>
+                  <p
+                    className="text-xs font-medium"
+                    style={{ color: "var(--v-primary)" }}
+                  >
                     {uploadedDocuments.size} of {documentInputs.length} uploaded
                   </p>
                 </div>
@@ -293,32 +338,46 @@ export default function ChatScreen(props: ScreenProps) {
                         isUploaded ? "opacity-75" : "hover:opacity-80"
                       }`}
                       style={{
-                        backgroundColor: isUploaded 
-                          ? "var(--v-bg)" 
+                        backgroundColor: isUploaded
+                          ? "var(--v-bg)"
                           : "var(--v-primary-soft)",
-                        border: `1px solid ${isUploaded ? "var(--v-primary)" : "var(--v-border)"}`,
+                        border: `1px solid ${
+                          isUploaded ? "var(--v-primary)" : "var(--v-border)"
+                        }`,
                       }}
                     >
                       <div className="flex-1 text-left">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium" style={{ color: "var(--v-text)" }}>
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "var(--v-text)" }}
+                          >
                             {input.name}
                           </p>
                           {isUploaded && (
-                            <span className="text-xs px-2 py-0.5 rounded" style={{ 
-                              backgroundColor: "var(--v-primary)", 
-                              color: "white" 
-                            }}>
+                            <span
+                              className="text-xs px-2 py-0.5 rounded"
+                              style={{
+                                backgroundColor: "var(--v-primary)",
+                                color: "white",
+                              }}
+                            >
                               ✓
                             </span>
                           )}
                         </div>
                         {isUploaded ? (
-                          <p className="text-xs mt-1" style={{ color: "var(--v-primary)" }}>
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "var(--v-primary)" }}
+                          >
                             {uploadedDoc?.fileName}
                           </p>
                         ) : (
-                          <p className="text-xs mt-1" style={{ color: "var(--v-muted)" }}>
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "var(--v-muted)" }}
+                          >
                             {input.description}
                           </p>
                         )}
@@ -328,19 +387,26 @@ export default function ChatScreen(props: ScreenProps) {
                           onClick={() => handleFileUpload(input.name)}
                           className="ml-2"
                         >
-                          <Upload size={18} style={{ color: "var(--v-primary)" }} />
+                          <Upload
+                            size={18}
+                            style={{ color: "var(--v-primary)" }}
+                          />
                         </button>
                       )}
                     </div>
                   );
                 })}
-                {uploadedDocuments.size === documentInputs.length && documentInputs.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-xs text-center" style={{ color: "var(--v-muted)" }}>
-                      All documents uploaded. Submitting...
-                    </p>
-                  </div>
-                )}
+                {uploadedDocuments.size === documentInputs.length &&
+                  documentInputs.length > 0 && (
+                    <div className="pt-2">
+                      <p
+                        className="text-xs text-center"
+                        style={{ color: "var(--v-muted)" }}
+                      >
+                        All documents uploaded. Submitting...
+                      </p>
+                    </div>
+                  )}
               </div>
             )}
 
@@ -369,15 +435,15 @@ export default function ChatScreen(props: ScreenProps) {
 
       {/* Input bar */}
       <div
-        className="px-3 py-3 flex items-center gap-2"
-        style={{ 
+        className="px-3 py-3 flex items-center"
+        style={{
           borderTop: "1px solid var(--v-border)",
           backgroundColor: "var(--v-bg)",
         }}
       >
         {/* Input */}
         <div
-          className="flex-1 flex items-center rounded-full px-3"
+          className="flex-1 flex items-center rounded-full overflow-hidden "
           style={{
             backgroundColor: "var(--v-card)",
             border: "1px solid var(--v-border)",
@@ -394,22 +460,33 @@ export default function ChatScreen(props: ScreenProps) {
             }}
             placeholder="Type your message..."
             disabled={isLoading}
-            className="flex-1 bg-transparent outline-none py-2 text-sm"
+            className="flex-1 bg-transparent outline-none pl-4 pr-2 py-2 text-sm"
             style={{ color: "var(--v-text)" }}
           />
           <button
             onClick={() => sendMessage?.()}
             disabled={isLoading || !text?.trim()}
-            className="h-9 w-9 rounded-full flex items-center justify-center transition disabled:opacity-50"
+            className="
+    h-10 w-10
+    rounded-full
+    flex items-center justify-center
+    transition
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+    hover:scale-105
+    active:scale-95
+  "
             style={{
               backgroundColor: "var(--v-primary)",
-              color: "white",
             }}
           >
             {isLoading ? (
-              <Loader2 size={16} className="animate-spin" />
+              <AiOutlineLoading3Quarters
+                size={18}
+                className="animate-spin text-white"
+              />
             ) : (
-              "➤"
+              <IoSend size={18} className="text-white ml-[1px]" />
             )}
           </button>
         </div>

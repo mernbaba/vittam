@@ -3,7 +3,13 @@ import { Routes, Route } from "react-router";
 import ChatScreen from "./screens/ChatScreen";
 import FormScreen from "./screens/FormScreen";
 import FinalScreen from "./screens/FinalScreen";
-import { Bot, X, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { RiCustomerService2Fill } from "react-icons/ri";
+import { IoClose } from "react-icons/io5";
+import { BsStars } from "react-icons/bs";
+
+
+
 import { createSession, sendChatMessage, getSessionHistory, type InputSpec } from "../services/api";
 
 
@@ -202,43 +208,43 @@ return (
         }}
       >
         <div className="relative flex flex-col items-center">
-          <Bot size={28} />
+          <RiCustomerService2Fill size={28} />
           <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
         </div>
       </button>
     )}
 
     {open && (
-      <div
-        className={`
-          fixed z-[9999999] pointer-events-auto
-          ${isMobile ? "inset-0 w-full h-full" : "bottom-6 right-6 w-[360px] h-[520px] rounded-3xl"}
-          flex flex-col overflow-hidden
-        `}
-        style={{
-          backgroundColor: "var(--v-bg)",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.25)",
-        }}
-      >
+  <div
+    className="
+      w-full h-full
+      flex flex-col overflow-hidden
+    "
+    style={{
+      backgroundColor: "var(--v-bg)",
+      boxShadow: "0 25px 60px rgba(0,0,0,0.25)",
+      borderRadius: isMobile ? "0px" : "24px",
+    }}
+  >
         <div
           className="flex items-center justify-between px-4 py-3"
           style={{
-            backgroundColor: "var(--v-card)",
-            borderBottom: "1px solid var(--v-border)",
+            backgroundColor: "var(--v-primary)",
+            borderBottom: "none",
           }}
         >
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "var(--v-primary-soft)" }}
+              style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
             >
-              <Bot size={20} style={{ color: "var(--v-primary)" }} />
+              <RiCustomerService2Fill size={20} style={{ color: "white" }} />
             </div>
 
             <div>
-              <div className="text-sm font-semibold">Vittam Assistant</div>
-              <div className="text-xs" style={{ color: "var(--v-muted)" }}>
-                AI Loan Guide
+              <div className="text-sm font-semibold text-white">Vittam Assistant</div>
+              <div className="text-xs text-white">
+                Your Loan Guide
               </div>
             </div>
           </div>
@@ -248,11 +254,11 @@ return (
             className="w-9 h-9 rounded-full flex items-center justify-center hover:opacity-80 transition"
             style={{ backgroundColor: "var(--v-card)" }}
           >
-            <X size={18} />
+            <IoClose size={18} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Routes>
             <Route path="/" element={<ChatScreen {...routedProps} />} />
             <Route path="/form" element={<FormScreen {...routedProps} />} />
@@ -263,12 +269,12 @@ return (
         <div
           className="flex items-center justify-center gap-2 py-2 text-xs"
           style={{
-            backgroundColor: "var(--v-bg)",
+            backgroundColor: "var(--v-primary)",
             borderTop: "1px solid var(--v-border)",
-            color: "var(--v-muted)",
+            color: "white",
           }}
         >
-          <Sparkles size={12} />
+          <BsStars size={12} />
           Powered by Vittam AI
         </div>
       </div>
