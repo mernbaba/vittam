@@ -53,7 +53,7 @@ export default function KycPanel() {
   const pendingCount = kyc.length - verifiedCount;
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] p-6">
+    <div className="min-h-screen p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-teal-800">KYC Dashboard</h1>
@@ -106,7 +106,7 @@ export default function KycPanel() {
       </div>
 
       {/* TABLE */}
-      <div className="rounded-3xl border bg-white overflow-hidden shadow-sm">
+      <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
         <Table>
           <TableHeader className="bg-[#FDF6EE]">
             <TableRow>

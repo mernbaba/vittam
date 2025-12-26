@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { RefreshCcw , Search} from "lucide-react";
+import { RefreshCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -38,9 +38,8 @@ export default function UsersPanel() {
     );
   }, [users, search]);
 
-
   return (
-    <div className="min-h-screen bg-[#F8FAF9] p-6">
+    <div className="min-h-screen p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-teal-800">Customer Data</h1>
@@ -61,7 +60,7 @@ export default function UsersPanel() {
       <div className="grid grid-cols-[300px_1fr] gap-6">
         {/* LEFT USER LIST */}
         <aside className="bg-white rounded-2xl border p-4">
-                    <div className="relative mb-4">
+          <div className="relative mb-4">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input
               value={search}
@@ -110,13 +109,15 @@ export default function UsersPanel() {
                   <h2 className="text-2xl font-semibold text-gray-800">
                     {activeUser.name}
                   </h2>
-                  <p className="text-sm text-gray-500">{activeUser.email}</p>
+                  <p className="text-sm text-gray-500">
+                    {activeUser.city}, India
+                  </p>
                 </div>
               </div>
 
               {/* INFO GRID */}
               <div className="grid grid-cols-3 gap-4">
-                <InfoCard label="City" value={`${activeUser.city}, India`} />
+                <InfoCard label="Email" value={activeUser?.email} />
                 <InfoCard
                   label="Date of Birth"
                   value={new Date(activeUser.dob).toLocaleDateString()}
@@ -125,43 +126,47 @@ export default function UsersPanel() {
               </div>
             </div>
 
-            {/* EXISTING LOANS */}
-            <div className="bg-white rounded-3xl border p-6 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Existing Loans</h3>
+            <div className="flex gap-6">
+              {/* EXISTING LOANS */}
+              <div className="flex-1 rounded-3xl border p-6 shadow-sm bg-white">
+                <h3 className="text-lg font-semibold mb-2">Existing Loans</h3>
 
-              {activeUser.current_loans?.length > 0 ? (
-                <div className="flex flex-wrap gap-3">
-                  {activeUser.current_loans.map((loan: any, i: number) => (
-                    <div
-                      key={i}
-                      className="rounded-xl bg-[#FDF6EE] px-4 py-3 hover:shadow transition"
-                    >
-                      <p className="font-medium text-sm">{loan.type}</p>
-                      <p className="text-xs text-gray-600">
-                        EMI ₹{loan.emi.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Outstanding ₹{loan.outstanding.toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No active loans</p>
-              )}
-            </div>
+                {activeUser.current_loans?.length > 0 ? (
+                  <div className="flex flex-wrap gap-3">
+                    {activeUser.current_loans.map((loan: any, i: number) => (
+                      <div
+                        key={i}
+                        className="rounded-xl bg-[#FDF6EE] px-4 py-3 hover:shadow transition"
+                      >
+                        <p className="font-medium text-sm">{loan.type}</p>
+                        <p className="text-xs text-gray-600">
+                          EMI ₹{loan.emi.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Outstanding ₹{loan.outstanding.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No active loans</p>
+                )}
+              </div>
 
-            {/* PRE-APPROVED LIMIT */}
-            <div className="rounded-3xl bg-gradient-to-br from-orange-50 to-orange-100 border p-6">
-              <p className="text-sm text-orange-700 mb-1">Pre-approved Limit</p>
+              {/* PRE-APPROVED LIMIT */}
+              <div className="flex-1 rounded-3xl bg-white border p-6">
+                <p className="text-sm text-green-700 mb-1">
+                  Pre-approved Limit
+                </p>
 
-              <p className="text-4xl font-bold text-orange-600">
-                ₹{activeUser.pre_approved_limit.toLocaleString()}
-              </p>
+                <p className="text-4xl font-bold text-green-600">
+                  ₹{activeUser.pre_approved_limit.toLocaleString()}
+                </p>
 
-              <p className="text-xs text-orange-700 mt-2">
-                Based on current profile
-              </p>
+                <p className="text-xs text-green-700 mt-2">
+                  Based on current profile
+                </p>
+              </div>
             </div>
           </main>
         )}

@@ -18,8 +18,8 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const active = pathname.split("/")[2] || "users";
 
   return (
-    <div className="min-h-screen flex bg-[#FFF8F1]">
-      <aside className="w-64 bg-[#FDF6EE] border-r p-4">
+    <div className="min-h-screen bg-[#FDF6EE] flex">
+      <aside className="w-64 bg-[#FDF6EE] border-r border-teal-500 p-4">
         <div className="mb-8">
           <Link href="/" className="flex items-center space-x-2">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
@@ -56,7 +56,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }
