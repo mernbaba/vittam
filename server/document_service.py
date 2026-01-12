@@ -1,19 +1,19 @@
 """Document Service - Database operations and file storage for Documents"""
 
 import os
-import uuid
+import io
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
 from bson import ObjectId
-
 from database import documents_collection
 from models import Document
 from session_service import get_session, update_session
+from config import s3, BUCKET_NAME, BUCKET_PREFIX
 
 
-# Base directory for storing documents
 STORE_DIR = Path(__file__).parent / "store"
+USE_REMOTE_UPLOAD = bool(int(os.getenv("USE_REMOTE_UPLOAD", "0")))
 
 
 def ensure_store_directory(session_id: str) -> Path:
@@ -66,18 +66,17 @@ def create_document(
     # Get file extension from original filename
     file_ext = Path(original_filename).suffix or ""
     
-    # Create file path: <SESSION_ID>/<doc_id><extension>
-    file_path = f"{session_id}/{doc_id}{file_ext}"
+    if USE_REMOTE_UPLOAD:
+        file_path = f"{BUCKET_PREFIX}/{session_id}/{doc_id}{file_ext}"
+        s3.upload_fileobj(io.BytesIO(file_content), BUCKET_NAME, file_path)
+    else:
+        file_path = f"{session_id}/{doc_id}{file_ext}"
+        session_dir = ensure_store_directory(session_id)
+        
+        file_path_full = session_dir / f"{doc_id}{file_ext}"
+        with open(file_path_full, "wb") as f:
+            f.write(file_content)
     
-    # Ensure store directory exists
-    session_dir = ensure_store_directory(session_id)
-    
-    # Save file to disk
-    file_path_full = session_dir / f"{doc_id}{file_ext}"
-    with open(file_path_full, "wb") as f:
-        f.write(file_content)
-    
-    # Create document entry
     now = datetime.now(timezone.utc)
     doc = {
         "_id": doc_id_obj,
@@ -87,13 +86,13 @@ def create_document(
         "original_filename": original_filename,
         "file_path": file_path,
         "file_size": file_size,
+        "remote": USE_REMOTE_UPLOAD,
         "uploaded_at": now,
-        "verification_status": "pending",  # Initial status: pending verification
+        "verification_status": "pending",
         "verification_feedback": None,
         "verified_at": None
     }
     
-    # Upsert document (insert or update)
     documents_collection.update_one(
         {"session_id": session_id, "doc_id": doc_id},
         {"$set": doc},

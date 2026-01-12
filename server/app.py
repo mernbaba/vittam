@@ -106,7 +106,7 @@ def sync_session_state_to_db(session_id: str, session_state: Dict[str, Any]):
 
 # ==================== DOCUMENT INPUT DETECTION ====================
 
-# HARDCODED DOCUMENT TYPES - These are the ONLY document types allowed
+# DOCUMENT TYPES - These are the ONLY document types allowed
 ALLOWED_DOCUMENT_TYPES = {
     "identity_proof": {
         "name": "Identity Proof",
@@ -399,7 +399,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS - Allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

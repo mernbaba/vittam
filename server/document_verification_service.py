@@ -1,18 +1,18 @@
 """Document Verification Service"""
 
 import os
+import io
 import json
 import base64
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from pathlib import Path
 from datetime import datetime, timezone
-
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.messages import HumanMessage, AIMessage
 import fitz  # PyMuPDF for PDF to image conversion
-
+from config import s3, BUCKET_NAME
 from document_service import get_documents_by_session, get_document_by_doc_id, STORE_DIR
 from database import documents_collection
 
@@ -23,7 +23,7 @@ load_dotenv()
 # Initialize vision-capable model for document verification
 VISION_MODEL_NAME = os.getenv("VISION_MODEL", "gpt-4o")
 BASE_URL = os.getenv("OPENAI_API_BASE")
-TEMPERATURE = 0.1
+TEMPERATURE = 0.2
 
 vision_model = ChatOpenAI(
     model=VISION_MODEL_NAME,
@@ -64,10 +64,14 @@ DOCUMENT_TYPE_EXPECTATIONS = {
 }
 
 
-def encode_image_to_base64(image_path: Path) -> str:
+def encode_image_to_base64(image_path: Path, remote: bool = False) -> str:
     """Encode image file to base64 string."""
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+    if remote:
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=image_path)
+        return base64.b64encode(response["Body"].read()).decode('utf-8')
+    else:
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode('utf-8')
 
 
 def encode_image_bytes_to_base64(image_bytes: bytes) -> str:
@@ -75,20 +79,27 @@ def encode_image_bytes_to_base64(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode('utf-8')
 
 
-def convert_pdf_to_images(pdf_path: Path, max_pages: int = 3) -> List[bytes]:
+def convert_pdf_to_images(pdf_path: Path, max_pages: int = 3, remote: bool = False) -> List[bytes]:
     """
     Convert PDF pages to image bytes.
     
     Args:
-        pdf_path: Path to PDF file
+        pdf_path: Path to PDF file (or S3 key if remote=True)
         max_pages: Maximum number of pages to convert (default: 3, for multi-page documents)
+        remote: Whether the document is stored remotely
     
     Returns:
         List of image bytes (PNG format)
     """
     try:
         # Open PDF with PyMuPDF
-        pdf_document = fitz.open(pdf_path)
+        if remote:
+            response = s3.get_object(Bucket=BUCKET_NAME, Key=pdf_path)
+            pdf_bytes = response["Body"].read()
+            # Use stream parameter for BytesIO or pass bytes directly
+            pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        else:
+            pdf_document = fitz.open(pdf_path)
         
         images = []
         # Convert first few pages to images (usually first page is enough for verification)
@@ -116,7 +127,8 @@ def convert_pdf_to_images(pdf_path: Path, max_pages: int = 3) -> List[bytes]:
 def verify_document_with_langchain(
     file_path: Path,
     doc_id: str,
-    doc_name: str
+    doc_name: str,
+    remote: bool = False
 ) -> Dict:
     """
     Verify a document using LangChain with OpenAI Vision model.
@@ -125,6 +137,7 @@ def verify_document_with_langchain(
         file_path: Path to the document file
         doc_id: Document ID (e.g., "identity_proof")
         doc_name: Document display name (e.g., "Identity Proof")
+        remote: Whether the document is stored remotely
     
     Returns:
         Dict with verification result:
@@ -143,7 +156,12 @@ def verify_document_with_langchain(
         key_fields = doc_expectations.get("key_fields", [])
         
         # Check file extension to determine if it's an image
-        file_ext = file_path.suffix.lower()
+        if remote:
+            file_ext = Path(file_path).suffix.lower()
+            logger.info(f"[VERIFY] Remote file extension: {file_ext}")
+        else:
+            file_ext = file_path.suffix.lower()
+            logger.info(f"[VERIFY] Local file extension: {file_ext}")
         is_image = file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']
         is_pdf = file_ext == '.pdf'
         
@@ -199,14 +217,13 @@ REQUIRED JSON FORMAT (respond with ONLY this JSON, nothing else):
 
 Remember: Respond with ONLY the JSON object, no other text."""
 
-        # Prepare message content for LangChain
         # Start with text prompt
         message_content = [{"type": "text", "text": verification_prompt}]
         
         # Add image or PDF to the message
         if is_image:
             # For images, encode to base64
-            base64_image = encode_image_to_base64(file_path)
+            base64_image = encode_image_to_base64(file_path, remote)
             message_content.append({
                 "type": "image_url",
                 "image_url": {
@@ -217,7 +234,7 @@ Remember: Respond with ONLY the JSON object, no other text."""
             # For PDFs, convert to images first
             try:
                 # Convert PDF pages to images (convert first page, or up to 3 pages for multi-page docs)
-                pdf_images = convert_pdf_to_images(file_path, max_pages=3)
+                pdf_images = convert_pdf_to_images(file_path, max_pages=3, remote=remote)
                 
                 if not pdf_images:
                     return {
@@ -371,19 +388,23 @@ def verify_document(document_id: str) -> Dict:
         }
     
     # Get file path
-    file_path = STORE_DIR / doc["file_path"]
-    if not file_path.exists():
-        return {
-            "success": False,
-            "message": "Document file not found on disk",
-            "document_id": document_id
-        }
+    if doc["remote"]:
+        file_path = doc["file_path"]
+    else:
+        file_path = STORE_DIR / doc["file_path"]
+        if not file_path.exists():
+            return {
+                "success": False,
+                "message": "Document file not found on disk",
+                "document_id": document_id
+            }
     
     # Verify document
     verification_result = verify_document_with_langchain(
-        file_path,
+        Path(file_path) if not doc["remote"] else file_path,
         doc["doc_id"],
-        doc["doc_name"]
+        doc["doc_name"],
+        doc["remote"]
     )
     
     # Update document status in database

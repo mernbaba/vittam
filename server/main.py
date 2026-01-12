@@ -59,7 +59,6 @@ def _get_allowed_document_types():
 
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)s - %(message)s',
@@ -1031,7 +1030,7 @@ TATA CAPITAL PERSONAL LOAN HIGHLIGHTS:
 - No collateral needed
 
 REQUIRED DOCUMENTS FOR PERSONAL LOAN:
-⚠️ CRITICAL: You can ONLY request these 5 document types (hardcoded). Use the EXACT keys when mentioning documents:
+⚠️ CRITICAL: You can ONLY request these 5 document types. Use the EXACT keys when mentioning documents:
 
 ALWAYS MANDATORY (request these for every loan):
 1. Identity Proof - Key: "identity_proof"
@@ -1650,7 +1649,7 @@ No collateral required
 {document_status_section}
 
 REQUIRED DOCUMENTS FOR PERSONAL LOAN:
-⚠️ CRITICAL: You can ONLY request these 5 document types (hardcoded). Use the EXACT keys when mentioning documents:
+⚠️ CRITICAL: You can ONLY request these 5 document types. Use the EXACT keys when mentioning documents:
 
 ALWAYS MANDATORY (request these for every loan):
 1. Identity Proof - Key: "identity_proof"

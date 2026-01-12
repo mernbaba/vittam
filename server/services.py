@@ -13,7 +13,7 @@ This module provides services backed by MongoDB for:
 """
 
 import logging
-from typing import Dict, Optional, Any
+from typing import Dict, Optional
 from datetime import datetime
 
 from database import (
@@ -23,7 +23,6 @@ from database import (
     sanctions_collection,
 )
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +46,6 @@ def _format_phone_for_display(phone: str) -> str:
 def _build_customer_data(user: Dict, kyc: Optional[Dict] = None) -> Dict:
     """
     Build a unified customer data dict from user and kyc documents.
-    This maintains backward compatibility with the old hardcoded format.
     """
     if not user:
         return None
@@ -863,7 +861,7 @@ def get_required_documents() -> Dict:
     """
     Get list of required documents for loan application.
 
-    IMPORTANT: These are the ONLY 5 document types allowed (hardcoded):
+    IMPORTANT: These are the ONLY 5 document types allowed:
     1. identity_proof (always mandatory)
     2. address_proof (always mandatory)
     3. bank_statement (always mandatory)

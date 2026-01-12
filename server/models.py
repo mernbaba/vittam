@@ -99,6 +99,7 @@ class Document(TypedDict, total=False):
     original_filename: str
     file_path: str  # e.g., "<SESSION_ID>/identity_proof"
     file_size: int  # Size in bytes
+    remote: bool
     uploaded_at: datetime
     verification_status: Optional[
         str
