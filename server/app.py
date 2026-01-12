@@ -30,6 +30,7 @@ from conversation_service import create_conversation, get_conversations
 from document_service import create_document, get_documents_by_session
 from document_verification_service import verify_document, verify_session_documents
 from models import SessionMetadata
+from database import sanctions_collection
 
 load_dotenv()
 
@@ -331,6 +332,7 @@ class ChatResponse(BaseModel):
     message: str
     inputs: List[InputSpec] = []
     session_id: str
+    sanction_id: Optional[str] = None  # Sanction ID if a sanction was just created
 
 
 class SessionResponse(BaseModel):
@@ -590,10 +592,28 @@ async def chat(request: ChatRequest):
             f"[API] Response generated - Length: {len(response_text)}, Detected inputs: {len(detected_inputs)}, Filtered inputs: {len(inputs)}"
         )
 
+        # Check if a sanction was created in this session
+        # Only return sanction_id if conversation_stage is "sanction" (indicates sanction was just created)
+        sanction_id = None
+        try:
+            if updated_session_state.get("conversation_stage") == "sanction":
+                # Get the most recent sanction for this session
+                latest_sanction = sanctions_collection.find_one(
+                    {"session_id": session_id},
+                    sort=[("created_at", -1)]
+                )
+                if latest_sanction:
+                    sanction_id = latest_sanction.get("sanction_id") or str(latest_sanction.get("_id"))
+                    logger.info(f"[API] Detected sanction creation: {sanction_id}")
+        except Exception as e:
+            logger.error(f"[API] Error checking for sanction: {str(e)}")
+            # Continue without sanction_id if there's an error
+
         return ChatResponse(
             message=response_text,
             inputs=[InputSpec(**inp) for inp in inputs],
             session_id=session_id,
+            sanction_id=sanction_id,
         )
 
     except Exception as e:

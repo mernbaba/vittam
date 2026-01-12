@@ -20,6 +20,7 @@ export interface ChatResponse {
   message: string;
   inputs: InputSpec[];
   session_id: string;
+  sanction_id?: string;  
 }
 
 export interface SessionResponse {

@@ -33,28 +33,40 @@ users_collection: Collection = db["users"]
 kycs_collection: Collection = db["kycs"]
 offer_template_collection: Collection = db["offer_template"]
 documents_collection: Collection = db["documents"]
+sanctions_collection: Collection = db["sanctions"]
+
 
 # Create indexes for better query performance
 def create_indexes():
     """Create database indexes for optimal query performance"""
     # Index on session_id for conversations (most common query)
     conversations_collection.create_index("session_id")
-    
+
     # Index on session_id for sessions (for lookups)
     sessions_collection.create_index("session_id", unique=True)
-    
+
     # Index on created_at for both collections (for sorting)
     sessions_collection.create_index("created_at")
     conversations_collection.create_index("created_at")
-    
+
     # Index on is_active for sessions (for filtering active sessions)
     sessions_collection.create_index("is_active")
-    
+
     # Index on session_id for documents (for lookups)
     documents_collection.create_index("session_id")
-    
+
     # Index on doc_id and session_id combination (for unique document per session)
     documents_collection.create_index([("session_id", 1), ("doc_id", 1)], unique=True)
+
+    # Index on customer_id for sanctions (for customer history)
+    sanctions_collection.create_index("customer_id")
+
+    # Index on session_id for sanctions (for session lookups)
+    sanctions_collection.create_index("session_id")
+
+    # Index on created_at for sanctions (for sorting)
+    sanctions_collection.create_index("created_at")
+
 
 # Initialize indexes on import
 create_indexes()

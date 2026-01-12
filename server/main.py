@@ -670,44 +670,40 @@ def verify_uploaded_documents(session_id: str) -> str:
         }, indent=2)
 
 
-@tool
-def check_document_verification_status(session_id: Optional[str] = None) -> str:
+def _check_document_verification_status_internal(session_id: Optional[str] = None) -> Dict:
     """
-    Check the verification status of all uploaded documents for the current session.
-    
-    Input: session_id (optional - will use current session if not provided)
-    Returns: Status of all documents (pending, verified, rejected) with details
-    
-    Use this to check if all documents are verified before proceeding to sanction letter.
-    
-    IMPORTANT: If session_id is not provided, this will automatically use the current session.
+    Internal helper function to check document verification status.
+    Returns a dict instead of JSON string for internal use.
     """
     # Use current_session_id if session_id not provided or if it looks invalid (not a UUID format)
-    # UUIDs typically have format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars with 4 dashes)
     if not session_id or len(session_id) < 30 or session_id.count('-') < 4:
         if current_session_id:
-            logger.info(f"[TOOL] check_document_verification_status - Using current_session_id: {current_session_id} (provided: {session_id})")
+            logger.info(f"[HELPER] _check_document_verification_status_internal - Using current_session_id: {current_session_id} (provided: {session_id})")
             session_id = current_session_id
         else:
-            logger.error(f"[TOOL] check_document_verification_status - No valid session_id provided and current_session_id is None")
-            return json.dumps({
+            logger.error(f"[HELPER] _check_document_verification_status_internal - No valid session_id provided and current_session_id is None")
+            return {
                 "success": False,
-                "message": "Session ID not available. Please ensure you're in an active session."
-            }, indent=2)
+                "message": "Session ID not available. Please ensure you're in an active session.",
+                "all_verified": False
+            }
     
-    logger.info(f"[TOOL] check_document_verification_status called - session_id: {session_id}")
+    logger.info(f"[HELPER] _check_document_verification_status_internal called - session_id: {session_id}")
     
     try:
         # Get all documents for session
         documents = get_documents_by_session(session_id)
         
         if not documents:
-            return json.dumps({
+            return {
                 "success": True,
                 "message": "No documents uploaded yet",
                 "documents": [],
-                "all_verified": False
-            }, indent=2)
+                "all_verified": False,
+                "verified_count": 0,
+                "pending_count": 0,
+                "rejected_count": 0
+            }
         
         # Format document statuses
         doc_statuses = []
@@ -742,11 +738,11 @@ def check_document_verification_status(session_id: Optional[str] = None) -> str:
         if all_verified and verified_count > 0:
             message += "\n✅ All documents are verified and ready!"
         elif rejected_count > 0:
-            message += "\n⚠️ Some documents need to be reuploaded."
+            message += "\n❌ Some documents were rejected. Please reupload."
         elif pending_count > 0:
             message += "\n⏳ Some documents are pending verification."
         
-        return json.dumps({
+        return {
             "success": True,
             "message": message,
             "documents": doc_statuses,
@@ -754,21 +750,41 @@ def check_document_verification_status(session_id: Optional[str] = None) -> str:
             "verified_count": verified_count,
             "pending_count": pending_count,
             "rejected_count": rejected_count
-        }, indent=2)
+        }
         
     except Exception as e:
-        logger.error(f"[TOOL] check_document_verification_status - Error: {str(e)}")
-        return json.dumps({
+        logger.error(f"[HELPER] _check_document_verification_status_internal - Error: {str(e)}")
+        return {
             "success": False,
-            "message": f"Error checking document status: {str(e)}"
-        }, indent=2)
+            "message": f"Error checking document status: {str(e)}",
+            "all_verified": False
+        }
+
+
+@tool
+def check_document_verification_status(session_id: Optional[str] = None) -> str:
+    """
+    Check the verification status of all uploaded documents for the current session.
+    
+    Input: session_id (optional - will use current session if not provided)
+    Returns: Status of all documents (pending, verified, rejected) with details
+    
+    Use this to check if all documents are verified before proceeding to sanction letter.
+    
+    IMPORTANT: If session_id is not provided, this will automatically use the current session.
+    """
+    # Use the internal helper function and convert to JSON string for tool response
+    result = _check_document_verification_status_internal(session_id)
+    return json.dumps(result, indent=2)
 
 
 # ==================== SANCTION LETTER AGENT TOOLS ====================
 
 @tool
 def generate_loan_sanction_letter(customer_id: str, loan_amount: float, 
-                                  tenure_months: int, interest_rate: float) -> str:
+                                  tenure_months: int, interest_rate: float,
+                                  account_number: str = "", ifsc_code: str = "",
+                                  account_holder_name: str = "", bank_name: str = "") -> str:
     """
     Generate sanction letter for approved loan.
     
@@ -776,10 +792,19 @@ def generate_loan_sanction_letter(customer_id: str, loan_amount: float,
     1. KYC is fully verified (customer_id must exist and be verified)
     2. Loan is approved (instant or conditional)
     3. ALL required documents are uploaded and verified
-    4. Bank account details are collected from customer
+    4. Bank account details are collected from customer (account_number, ifsc_code, account_holder_name)
     
-    Input: customer_id, loan_amount, tenure_months, interest_rate
-    Returns: Sanction letter summary with all terms and conditions
+    Input: 
+        customer_id: Customer identifier
+        loan_amount: Sanctioned loan amount
+        tenure_months: Loan tenure in months
+        interest_rate: Annual interest rate percentage
+        account_number: Bank account number (required)
+        ifsc_code: Bank IFSC code (required)
+        account_holder_name: Account holder name (required)
+        bank_name: Bank name (optional)
+    
+    Returns: Sanction letter summary with all terms and conditions, including sanction_id
     
     Note: This is the LAST step in the loan process. Never call this before all verifications are complete.
     """
@@ -787,12 +812,20 @@ def generate_loan_sanction_letter(customer_id: str, loan_amount: float,
     logger.info(f"[TOOL] generate_loan_sanction_letter - Current session_id: {current_session_id}, conversation_stage: {session_state.get('conversation_stage')}")
     
     # Verify customer exists and is verified
-    customer = get_customer_by_id(customer_id)
-    if not customer:
-        error_msg = "Cannot generate sanction letter: Customer not found or KYC not verified. Please complete KYC verification first."
+    try:
+        customer = get_customer_by_id(customer_id)
+        if not customer or not isinstance(customer, dict):
+            error_msg = "Cannot generate sanction letter: Customer not found or KYC not verified. Please complete KYC verification first."
+            logger.error(f"[TOOL] generate_loan_sanction_letter - {error_msg}")
+            return json.dumps({"success": False, "message": error_msg}, indent=2)
+        customer_name = customer.get('name', 'N/A') if isinstance(customer, dict) else 'N/A'
+        logger.info(f"[TOOL] generate_loan_sanction_letter - Customer found: {customer_name}")
+    except Exception as e:
+        error_msg = f"Cannot generate sanction letter: Error retrieving customer data: {str(e)}"
         logger.error(f"[TOOL] generate_loan_sanction_letter - {error_msg}")
+        import traceback
+        logger.error(f"[TOOL] generate_loan_sanction_letter - Traceback: {traceback.format_exc()}")
         return json.dumps({"success": False, "message": error_msg}, indent=2)
-    logger.info(f"[TOOL] generate_loan_sanction_letter - Customer found: {customer.get('name', 'N/A')}")
     
     # Check if loan is approved (should be in underwriting stage or already approved)
     conversation_stage = session_state.get("conversation_stage")
@@ -806,8 +839,10 @@ def generate_loan_sanction_letter(customer_id: str, loan_amount: float,
     if current_session_id:
         try:
             logger.info(f"[TOOL] generate_loan_sanction_letter - Checking document verification status for session: {current_session_id}")
-            status_result = check_document_verification_status(current_session_id)
-            status_data = json.loads(status_result)
+            status_data = _check_document_verification_status_internal(current_session_id)
+            if not isinstance(status_data, dict):
+                logger.warning(f"[TOOL] generate_loan_sanction_letter - Unexpected return type from document check: {type(status_data)}")
+                status_data = {"all_verified": False, "pending_count": 0, "rejected_count": 0}
             logger.info(f"[TOOL] generate_loan_sanction_letter - Document status: all_verified={status_data.get('all_verified')}, pending={status_data.get('pending_count', 0)}, rejected={status_data.get('rejected_count', 0)}")
             if not status_data.get("all_verified", False):
                 pending = status_data.get("pending_count", 0)
@@ -823,16 +858,37 @@ def generate_loan_sanction_letter(customer_id: str, loan_amount: float,
     else:
         logger.warning(f"[TOOL] generate_loan_sanction_letter - current_session_id is None, skipping document verification check")
     
+    # Validate bank details
+    if not account_number or not ifsc_code or not account_holder_name:
+        error_msg = "Cannot generate sanction letter: Bank account details are required. Please provide account_number, ifsc_code, and account_holder_name."
+        logger.error(f"[TOOL] generate_loan_sanction_letter - {error_msg}")
+        return json.dumps({"success": False, "message": error_msg}, indent=2)
+    
+    # Prepare bank details
+    bank_details = {
+        "account_number": account_number,
+        "ifsc_code": ifsc_code.upper().strip(),
+        "account_holder_name": account_holder_name,
+        "bank_name": bank_name if bank_name else None,
+    }
+    
     try:
-        logger.info(f"[TOOL] generate_loan_sanction_letter - Calling generate_sanction_letter service with: customer_id={customer_id}, loan_amount={loan_amount}, tenure_months={tenure_months}, interest_rate={interest_rate}")
-        result = generate_sanction_letter(customer_id, loan_amount, tenure_months, interest_rate)
-        logger.info(f"[TOOL] generate_loan_sanction_letter - Service returned: success={result.get('success')}, message={result.get('message', 'N/A')[:100]}")
+        logger.info(f"[TOOL] generate_loan_sanction_letter - Calling generate_sanction_letter service with: customer_id={customer_id}, loan_amount={loan_amount}, tenure_months={tenure_months}, interest_rate={interest_rate}, session_id={current_session_id}")
+        result = generate_sanction_letter(
+            customer_id=customer_id,
+            loan_amount=loan_amount,
+            tenure_months=tenure_months,
+            interest_rate=interest_rate,
+            bank_details=bank_details,
+            session_id=current_session_id,
+        )
+        logger.info(f"[TOOL] generate_loan_sanction_letter - Service returned: success={result.get('success')}, sanction_id={result.get('sanction_id', 'N/A')}, message={result.get('message', 'N/A')[:100]}")
         
         if result.get("success"):
             session_state["conversation_stage"] = "sanction"
             # Update session in database
             sync_session_to_db()
-            logger.info(f"[TOOL] generate_loan_sanction_letter - Sanction letter generated successfully for customer: {customer_id}")
+            logger.info(f"[TOOL] generate_loan_sanction_letter - Sanction letter generated successfully for customer: {customer_id}, sanction_id: {result.get('sanction_id')}")
         else:
             error_msg = result.get("message", "Unknown error")
             logger.error(f"[TOOL] generate_loan_sanction_letter - Failed to generate sanction letter. Error: {error_msg}")

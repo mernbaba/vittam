@@ -1,10 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router";
 import { User, Upload, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { InputSpec } from "../../services/api";
-import { IoSend } from "react-icons/io5";
-
+import { IoDocumentText, IoSend } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { RiCustomerService2Fill } from "react-icons/ri";
 
@@ -16,8 +14,8 @@ type UploadedDocument = {
 
 type ScreenProps = {
   botId?: string;
-  messages: { who: "bot" | "user"; text: string }[];
-  addMessage: (who: "bot" | "user", text: string) => void;
+  messages: { who: "bot" | "user"; text: string; sanction_id?: string }[];
+  addMessage: (who: "bot" | "user", text: string, sanctionId?: string) => void;
   sendMessage: (text?: string) => void;
   closePanel: () => void;
   messagesRef?: React.RefObject<HTMLDivElement>;
@@ -29,8 +27,8 @@ type ScreenProps = {
   uploadedDocuments?: Map<string, UploadedDocument>;
   onDocumentUpload?: (docName: string, file: File) => void;
 };
-export default function ChatScreen(props: ScreenProps) {
-  const nav = useNavigate();
+
+const ChatScreen = (props: ScreenProps) => {
   const {
     messages,
     addMessage,
@@ -289,6 +287,23 @@ export default function ChatScreen(props: ScreenProps) {
                       {msg.text}
                     </p>
                   )}
+                  {msg.who === "bot" && msg.sanction_id && (
+                    <div className="mt-3">
+                      <a
+                        href={`/letters/${msg.sanction_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full rounded-xl px-4 py-2.5 text-sm font-medium transition hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+                        style={{
+                          backgroundColor: "var(--v-primary)",
+                          color: "white",
+                        }}
+                      >
+                        <IoDocumentText size={16} />
+                        <span>View Sanction Letter</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
                 {msg.who === "user" && (
                   <div
@@ -517,4 +532,6 @@ export default function ChatScreen(props: ScreenProps) {
       </div>
     </div>
   );
-}
+};
+
+export default ChatScreen;

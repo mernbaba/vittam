@@ -28,7 +28,7 @@ type UploadedDocument = {
 export default function App({ botId }: Props) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<
-    { who: "bot" | "user"; text: string }[]
+    { who: "bot" | "user"; text: string; sanction_id?: string }[]
   >([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -140,8 +140,8 @@ export default function App({ botId }: Props) {
       );
   }, [sessionId]);
 
-  function addMessage(who: "bot" | "user", text: string) {
-    setMessages((prev) => [...prev, { who, text }]);
+  function addMessage(who: "bot" | "user", text: string, sanctionId?: string) {
+    setMessages((prev) => [...prev, { who, text, ...(sanctionId && { sanction_id: sanctionId }) }]);
     if (!open) setOpen(true);
   }
 
@@ -159,8 +159,8 @@ export default function App({ botId }: Props) {
       // Send message to server
       const response = await sendChatMessage(content, sessionId);
 
-      // Add bot response
-      addMessage("bot", response.message);
+      // Add bot response with sanction_id if present
+      addMessage("bot", response.message, response.sanction_id);
 
       // Handle document upload requirements
       if (response.inputs && response.inputs.length > 0) {

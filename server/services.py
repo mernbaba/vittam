@@ -20,6 +20,7 @@ from database import (
     users_collection,
     kycs_collection,
     offer_template_collection,
+    sanctions_collection,
 )
 
 # Configure logging
@@ -861,7 +862,7 @@ def get_loan_charges_info() -> Dict:
 def get_required_documents() -> Dict:
     """
     Get list of required documents for loan application.
-    
+
     IMPORTANT: These are the ONLY 5 document types allowed (hardcoded):
     1. identity_proof (always mandatory)
     2. address_proof (always mandatory)
@@ -891,7 +892,7 @@ def get_required_documents() -> Dict:
             "bank_statement": {
                 "doc_id": "bank_statement",
                 "name": "Bank Statement",
-                "description": "Primary bank statement (salary account) for last 3 months"
+                "description": "Primary bank statement (salary account) for last 3 months",
             },
         },
         "conditional_only": {
@@ -899,12 +900,12 @@ def get_required_documents() -> Dict:
             "salary_slip": {
                 "doc_id": "salary_slip",
                 "name": "Salary Slips",
-                "description": "Salary slips for last 2 months"
+                "description": "Salary slips for last 2 months",
             },
             "employment_certificate": {
                 "doc_id": "employment_certificate",
                 "name": "Employment Certificate",
-                "description": "Certificate confirming at least 1 year of continuous employment"
+                "description": "Certificate confirming at least 1 year of continuous employment",
             },
         },
         "notes": [
@@ -919,17 +920,134 @@ def get_required_documents() -> Dict:
     return {"success": True, "documents": documents}
 
 
-def generate_sanction_letter(
-    customer_id: str, loan_amount: float, tenure_months: int, interest_rate: float
+def create_sanction(
+    customer_id: str,
+    loan_amount: float,
+    tenure_months: int,
+    interest_rate: float,
+    bank_details: Dict[str, str],
+    session_id: Optional[str] = None,
+    customer_name: Optional[str] = None,
 ) -> Dict:
-    """Generate sanction letter summary (text format for now)."""
+    """
+    Create a sanction record in the database with bank details and loan information.
+
+    Args:
+        customer_id: Customer identifier
+        loan_amount: Sanctioned loan amount
+        tenure_months: Loan tenure in months
+        interest_rate: Annual interest rate percentage
+        bank_details: Dictionary with account_number, ifsc_code, account_holder_name, bank_name (optional)
+        session_id: Optional session ID
+        customer_name: Optional customer name
+
+    Returns:
+        Dict with success status and sanction_id
+    """
+    logger.info(
+        f"[SERVICE] create_sanction called - customer_id: {customer_id}, amount: ₹{loan_amount:,.0f}"
+    )
+
+    try:
+        # Calculate EMI and total amounts
+        emi_result = calculate_emi(loan_amount, tenure_months, interest_rate)
+
+        # Get customer data if name not provided
+        if not customer_name:
+            customer = get_customer_by_id(customer_id)
+            customer_name = customer.get("name") if customer else None
+
+        # Calculate processing fee (default 3.5%)
+        processing_fee_pct = 3.5
+        processing_fee = loan_amount * (processing_fee_pct / 100)
+
+        # Create sanction document
+        now = datetime.now()
+        sanction_doc = {
+            "customer_id": customer_id,
+            "session_id": session_id,
+            "customer_name": customer_name,
+            "loan_amount": loan_amount,
+            "tenure_months": tenure_months,
+            "interest_rate": interest_rate,
+            "emi": emi_result["emi"],
+            "total_amount": emi_result["total_amount"],
+            "total_interest": emi_result["total_interest"],
+            "processing_fee": processing_fee,
+            "processing_fee_pct": processing_fee_pct,
+            "bank_details": {
+                "account_number": bank_details.get("account_number", ""),
+                "ifsc_code": bank_details.get("ifsc_code", "").upper(),
+                "account_holder_name": bank_details.get("account_holder_name", ""),
+                "bank_name": bank_details.get("bank_name"),
+            },
+            "validity_days": 30,
+            "status": "active",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        # Insert into database
+        result = sanctions_collection.insert_one(sanction_doc)
+        sanction_id = str(result.inserted_id)
+
+        # Update document with sanction_id
+        sanctions_collection.update_one(
+            {"_id": result.inserted_id}, {"$set": {"sanction_id": sanction_id}}
+        )
+
+        logger.info(
+            f"[SERVICE] create_sanction - Sanction created successfully: {sanction_id} for customer: {customer_id}"
+        )
+
+        return {
+            "success": True,
+            "sanction_id": sanction_id,
+            "message": "Sanction created successfully",
+        }
+    except Exception as e:
+        logger.error(f"[SERVICE] create_sanction - Exception occurred: {str(e)}")
+        import traceback
+
+        logger.error(f"[SERVICE] create_sanction - Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "sanction_id": None,
+            "message": f"Error creating sanction: {str(e)}",
+        }
+
+
+def generate_sanction_letter(
+    customer_id: str,
+    loan_amount: float,
+    tenure_months: int,
+    interest_rate: float,
+    bank_details: Optional[Dict[str, str]] = None,
+    session_id: Optional[str] = None,
+) -> Dict:
+    """
+    Generate sanction letter summary and create sanction record in database.
+
+    Args:
+        customer_id: Customer identifier
+        loan_amount: Sanctioned loan amount
+        tenure_months: Loan tenure in months
+        interest_rate: Annual interest rate percentage
+        bank_details: Optional dictionary with account_number, ifsc_code, account_holder_name, bank_name
+        session_id: Optional session ID
+
+    Returns:
+        Dict with sanction letter details and sanction_id
+    """
     logger.info(
         f"[SERVICE] generate_sanction_letter called - customer_id: {customer_id}, amount: ₹{loan_amount:,.0f}, tenure: {tenure_months} months, rate: {interest_rate}%"
     )
 
     try:
         customer = get_customer_by_id(customer_id)
-        logger.info(f"[SERVICE] generate_sanction_letter - Customer lookup result: {'Found' if customer else 'Not found'}")
+        logger.info(
+            f"[SERVICE] generate_sanction_letter - Customer lookup result: {'Found' if customer else 'Not found'}"
+        )
 
         if not customer:
             logger.error(
@@ -937,32 +1055,103 @@ def generate_sanction_letter(
             )
             return {"success": False, "message": "Customer not found"}
 
-        logger.info(f"[SERVICE] generate_sanction_letter - Calculating EMI for amount: ₹{loan_amount:,.0f}, tenure: {tenure_months} months, rate: {interest_rate}%")
+        logger.info(
+            f"[SERVICE] generate_sanction_letter - Calculating EMI for amount: ₹{loan_amount:,.0f}, tenure: {tenure_months} months, rate: {interest_rate}%"
+        )
         emi_result = calculate_emi(loan_amount, tenure_months, interest_rate)
-        logger.info(f"[SERVICE] generate_sanction_letter - EMI calculation result: {emi_result}")
-        
+        logger.info(
+            f"[SERVICE] generate_sanction_letter - EMI calculation result: {emi_result}"
+        )
+
         customer_name = customer.get("name", "Valued Customer")
-        logger.info(f"[SERVICE] generate_sanction_letter - Customer name: {customer_name}")
+        logger.info(
+            f"[SERVICE] generate_sanction_letter - Customer name: {customer_name}"
+        )
+
+        # Validate bank details if provided
+        if bank_details:
+            required_fields = ["account_number", "ifsc_code", "account_holder_name"]
+            missing_fields = [
+                field for field in required_fields if not bank_details.get(field)
+            ]
+            if missing_fields:
+                logger.warning(
+                    f"[SERVICE] generate_sanction_letter - Missing bank details fields: {missing_fields}"
+                )
+                return {
+                    "success": False,
+                    "message": f"Missing required bank details: {', '.join(missing_fields)}",
+                }
+        else:
+            logger.warning(
+                f"[SERVICE] generate_sanction_letter - Bank details not provided"
+            )
+            return {
+                "success": False,
+                "message": "Bank details are required to generate sanction letter",
+            }
+
+        # Create sanction record in database
+        sanction_result = create_sanction(
+            customer_id=customer_id,
+            loan_amount=loan_amount,
+            tenure_months=tenure_months,
+            interest_rate=interest_rate,
+            bank_details=bank_details,
+            session_id=session_id,
+            customer_name=customer_name,
+        )
+
+        if not sanction_result.get("success"):
+            logger.error(
+                f"[SERVICE] generate_sanction_letter - Failed to create sanction record: {sanction_result.get('message')}"
+            )
+            return {
+                "success": False,
+                "message": f"Failed to create sanction record: {sanction_result.get('message')}",
+            }
+
+        sanction_id = sanction_result.get("sanction_id")
+        logger.info(f"[SERVICE] generate_sanction_letter - Sanction ID: {sanction_id}")
+
+        # Format bank account for display
+        account_number = bank_details.get("account_number", "")
+        masked_account = (
+            f"****{account_number[-4:]}" if len(account_number) > 4 else "****"
+        )
+        disbursement_account = f"{bank_details.get('account_holder_name', '')} - {masked_account} ({bank_details.get('ifsc_code', '')})"
+
+        # Calculate processing fee
+        processing_fee_pct = 3.5
+        processing_fee = loan_amount * (processing_fee_pct / 100)
 
         sanction_letter = {
-        "success": True,
-        "customer_id": customer_id,
-        "customer_name": customer_name,
-        "sanction_date": datetime.now().strftime("%Y-%m-%d"),
-        "loan_amount": loan_amount,
-        "tenure_months": tenure_months,
-        "interest_rate": interest_rate,
-        "emi": emi_result["emi"],
-        "total_amount": emi_result["total_amount"],
-        "disbursement_account": "To be provided by customer",
-        "terms_and_conditions": [
-            "Loan amount will be disbursed within 24-48 hours of document verification",
-            "Interest rate is fixed for the entire tenure",
-            "Prepayment charges apply as per policy",
-            "Default in payment will attract penalty charges",
-            "All disputes subject to jurisdiction of Mumbai courts",
-        ],
-        "summary": f"""
+            "success": True,
+            "customer_id": customer_id,
+            "customer_name": customer_name,
+            "loan_amount": loan_amount,
+            "tenure_months": tenure_months,
+            "interest_rate": interest_rate,
+            "emi": emi_result["emi"],
+            "total_amount": emi_result["total_amount"],
+            "total_interest": emi_result["total_interest"],
+            "processing_fee": processing_fee,
+            "processing_fee_pct": processing_fee_pct,
+            "disbursement_account": disbursement_account,
+            "bank_details": {
+                "account_number": masked_account,
+                "ifsc_code": bank_details.get("ifsc_code", ""),
+                "account_holder_name": bank_details.get("account_holder_name", ""),
+                "bank_name": bank_details.get("bank_name"),
+            },
+            "terms_and_conditions": [
+                "Loan amount will be disbursed within 24-48 hours of document verification",
+                "Interest rate is fixed for the entire tenure",
+                "Prepayment charges apply as per policy",
+                "Default in payment will attract penalty charges",
+                "All disputes subject to jurisdiction of Mumbai courts",
+            ],
+            "summary": f"""
 SANCTION LETTER
 
 Dear {customer_name},
@@ -975,6 +1164,12 @@ Loan Details:
 - Interest Rate: {interest_rate}% per annum
 - EMI: ₹{emi_result["emi"]:,.2f}
 - Total Amount Payable: ₹{emi_result["total_amount"]:,.2f}
+- Processing Fee: ₹{processing_fee:,.2f} ({processing_fee_pct}% + GST)
+
+Disbursement Account:
+- Account Holder: {bank_details.get('account_holder_name', '')}
+- Account Number: {masked_account}
+- IFSC Code: {bank_details.get('ifsc_code', '')}
 
 This sanction is valid for 30 days from the date of issue.
 
@@ -982,16 +1177,26 @@ Please contact us to complete the disbursement process.
 
 Best Regards,
 Tata Capital Personal Loans Team
-        """.strip(),
-    }
+            """.strip(),
+        }
 
         logger.info(
-            f"[SERVICE] generate_sanction_letter - Sanction letter generated successfully for customer: {customer_id}"
+            f"[SERVICE] generate_sanction_letter - Sanction letter generated successfully for customer: {customer_id}, sanction_id: {sanction_id}"
         )
-        logger.info(f"[SERVICE] generate_sanction_letter - Returning sanction letter with keys: {list(sanction_letter.keys())}")
+        logger.info(
+            f"[SERVICE] generate_sanction_letter - Returning sanction letter with keys: {list(sanction_letter.keys())}"
+        )
         return sanction_letter
     except Exception as e:
-        logger.error(f"[SERVICE] generate_sanction_letter - Exception occurred: {str(e)}")
+        logger.error(
+            f"[SERVICE] generate_sanction_letter - Exception occurred: {str(e)}"
+        )
         import traceback
-        logger.error(f"[SERVICE] generate_sanction_letter - Traceback: {traceback.format_exc()}")
-        return {"success": False, "message": f"Error generating sanction letter: {str(e)}"}
+
+        logger.error(
+            f"[SERVICE] generate_sanction_letter - Traceback: {traceback.format_exc()}"
+        )
+        return {
+            "success": False,
+            "message": f"Error generating sanction letter: {str(e)}",
+        }

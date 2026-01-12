@@ -100,6 +100,39 @@ class Document(TypedDict, total=False):
     file_path: str  # e.g., "<SESSION_ID>/identity_proof"
     file_size: int  # Size in bytes
     uploaded_at: datetime
-    verification_status: Optional[str]  # "verified", "unverified", "rejected", "pending"
+    verification_status: Optional[
+        str
+    ]  # "verified", "unverified", "rejected", "pending"
     verification_feedback: Optional[str]  # Feedback from verification (if rejected)
     verified_at: Optional[datetime]  # When document was verified
+
+
+class BankDetails(TypedDict):
+    """Bank account details for disbursement"""
+
+    account_number: str
+    ifsc_code: str
+    account_holder_name: str
+    bank_name: Optional[str]
+
+
+class Sanction(TypedDict, total=False):
+    """Sanction document for the sanctions collection"""
+
+    _id: Optional[ObjectId]
+    customer_id: str
+    session_id: Optional[str]
+    customer_name: Optional[str]
+    loan_amount: float
+    tenure_months: int
+    interest_rate: float
+    emi: float
+    total_amount: float
+    total_interest: float
+    processing_fee: Optional[float]
+    processing_fee_pct: Optional[float]
+    bank_details: BankDetails
+    validity_days: Optional[int]  # Default 30 days
+    status: Optional[str]  # "pending", "active", "expired", "disbursed"
+    created_at: datetime
+    updated_at: datetime
