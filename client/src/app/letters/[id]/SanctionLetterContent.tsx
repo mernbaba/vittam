@@ -1,20 +1,33 @@
-import {
-  HiOutlineArrowDownTray,
-  HiOutlinePrinter,
-  HiOutlineShieldCheck,
-} from "react-icons/hi2";
+import { HiOutlineArrowDownTray, HiOutlineShieldCheck } from "react-icons/hi2";
 import PrintButton from "./PrintButton";
 import Image from "next/image";
 import Link from "next/link";
-import { SanctionData } from "./page";
 
-export default function SanctionLetterContent({
+export interface SanctionData {
+  customer_id: string;
+  customer_name: string;
+  loan_amount: number;
+  tenure_months: number;
+  interest_rate: number;
+  emi: number;
+  total_amount: number;
+  processing_fee: number;
+  created_at: Date;
+  validity_days: number;
+  bank_details?: {
+    account_number?: string;
+    ifsc_code?: string;
+    account_holder_name?: string;
+  };
+}
+
+const SanctionLetterContent = ({
   data,
   id,
 }: {
   data: SanctionData;
   id: string;
-}) {
+}) => {
   const sanctionDateString = new Date(data.created_at).toLocaleDateString(
     "en-IN",
     {
@@ -229,9 +242,9 @@ export default function SanctionLetterContent({
             </div>
           </div>
 
-          <div className="flex items-start gap-4 mt-28">
+          <div className="flex items-center justify-between gap-4 mt-28">
             <div className="flex-1">
-              <p className="text-[11px] italic leading-tight">
+              <p className="text-xs italic leading-tight">
                 <span className="font-bold">Note:</span> This is an
                 electronically generated document. No physical signature is
                 required. For any assistance, please contact us at{" "}
@@ -252,8 +265,8 @@ export default function SanctionLetterContent({
                 .
               </p>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 border border-emerald-100 bg-emerald-50 px-3 py-1 rounded-sm flex-shrink-0">
-              <HiOutlineShieldCheck className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 border border-emerald-100 bg-emerald-50 px-3 py-1 rounded-sm flex-shrink-0">
+              <HiOutlineShieldCheck className="size-4" />
               VERIFIED ELECTRONICALLY
             </div>
           </div>
@@ -267,4 +280,6 @@ export default function SanctionLetterContent({
       </div>
     </div>
   );
-}
+};
+
+export default SanctionLetterContent;

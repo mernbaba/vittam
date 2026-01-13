@@ -22,7 +22,9 @@ const UserSchema = new Schema(
     current_loans: [CurrentLoanSchema],
     pre_approved_limit: Number,
   },
-  { timestamps: true }
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+  }
 );
 
 export const User = models.User || model("User", UserSchema);

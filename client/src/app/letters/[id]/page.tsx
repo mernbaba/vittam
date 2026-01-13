@@ -1,60 +1,14 @@
 import { connectDB } from "@/lib/mongodb";
-import mongoose from "mongoose";
+import { Sanction } from "@/models/Sanction";
 import SanctionLetterContent from "./SanctionLetterContent";
 
-export interface SanctionData {
-  customer_id: string;
-  customer_name: string;
-  loan_amount: number;
-  tenure_months: number;
-  interest_rate: number;
-  emi: number;
-  total_amount: number;
-  processing_fee: number;
-  created_at: Date;
-  validity_days: number;
-  bank_details?: {
-    account_number?: string;
-    ifsc_code?: string;
-    account_holder_name?: string;
-  };
-}
-
-async function getSanctionData(id: string): Promise<SanctionData | null> {
+async function getSanctionData(id: string) {
   try {
     await connectDB();
-    const db = mongoose.connection.db;
-    if (!db) return null;
-
-    let query = {};
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      query = { _id: new mongoose.Types.ObjectId(id) };
-    } else {
-      query = { sanction_id: id };
-    }
-
-    const data = await db.collection("sanctions").findOne(query);
+    const data = await Sanction.findById(id).lean();
     if (!data) return null;
 
-    return {
-      customer_id: data.customer_id,
-      customer_name: data.customer_name,
-      loan_amount: data.loan_amount,
-      tenure_months: data.tenure_months,
-      interest_rate: data.interest_rate,
-      emi: data.emi,
-      total_amount: data.total_amount,
-      processing_fee: data.processing_fee,
-      created_at: data.created_at,
-      validity_days: data.validity_days,
-      bank_details: data.bank_details
-        ? {
-            account_number: data.bank_details.account_number,
-            ifsc_code: data.bank_details.ifsc_code,
-            account_holder_name: data.bank_details.account_holder_name,
-          }
-        : undefined,
-    };
+    return data;
   } catch (error) {
     console.error("Error fetching sanction data:", error);
     return null;
@@ -84,12 +38,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     );
   }
 
-  const serializedSanction = {
-    ...sanction,
-    created_at: sanction.created_at.toISOString(),
-  };
-
-  return <SanctionLetterContent data={serializedSanction as any} id={id} />;
+  return <SanctionLetterContent data={sanction} id={id} />;
 };
 
 export default Page;
