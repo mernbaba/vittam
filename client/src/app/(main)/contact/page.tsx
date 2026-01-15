@@ -5,7 +5,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 
 const Page = () => {
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 lg:px-8 py-32 max-w-7xl">
       <div className="grid md:grid-cols-2 gap-16">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Get in Touch</h1>

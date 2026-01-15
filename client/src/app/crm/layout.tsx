@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Users, ShieldCheck, CreditCard } from "lucide-react";
+import { Users, ShieldCheck, CreditCard, FileCheck } from "lucide-react";
 
 const items = [
   { id: "users", label: "Users", icon: Users },
   { id: "kyc", label: "KYC Details", icon: ShieldCheck },
   { id: "offers", label: "Offers", icon: CreditCard },
+  { id: "sanctions", label: "Sanctions", icon: FileCheck },
 ];
 
 export default function CRMLayout({ children }: { children: React.ReactNode }) {

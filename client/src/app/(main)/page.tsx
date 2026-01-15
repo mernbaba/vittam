@@ -59,7 +59,7 @@ export default function Home() {
               size="lg"
               className="h-12 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:scale-105 transition-all duration-300"
             >
-              Book a Demo
+              <Link href="/contact">Book a Demo</Link>
             </Button>
             <Button
               variant="outline"

@@ -81,8 +81,8 @@ export default function UsersPanel() {
                 key={i}
                 onClick={() => setActiveUser(u)}
                 className={`w-full text-left rounded-xl p-3 border transition ${activeUser?.email === u.email
-                    ? "bg-teal-50 border-teal-300"
-                    : "hover:bg-gray-50"
+                  ? "bg-teal-50 border-teal-300"
+                  : "hover:bg-gray-50"
                   }`}
               >
                 <p className="font-medium">{u.name}</p>

@@ -16,7 +16,7 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
+      <div className="container mx-auto px-4 flex h-16 items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
@@ -27,61 +27,62 @@ export const Header = () => {
           </span>
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex gap-4 lg:gap-8 items-center">
-          <Link
-            href="/solutions"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            Solutions
-          </Link>
-          <Link
-            href="/resources"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            Resources
-          </Link>
-          <Link
-            href="/about"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            About
-          </Link>
-          <Link
-            href="/crm"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            CRM Dashboard
-          </Link>
-          <Link
-            href="/contact"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            Contact
-          </Link>
-        </nav>
+        {/* Desktop Nav & Actions */}
+        <div className="ml-auto flex items-center gap-4 lg:gap-8">
+          <nav className="hidden md:flex gap-4 lg:gap-8 items-center">
+            <Link
+              href="/solutions"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Solutions
+            </Link>
+            <Link
+              href="/resources"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Resources
+            </Link>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              About
+            </Link>
+            <Link
+              href="/crm"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              CRM
+            </Link>
+            <Link
+              href="/contact"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Contact
+            </Link>
+          </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            className="hidden md:flex font-medium text-muted-foreground hover:text-primary"
-          >
-            Sign In
-          </Button>
-          <Button className="hidden md:flex font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-            Book a Demo
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Open menu"
-            type="button"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-4">
+            {/* <Button
+              variant="outline"
+              className="hidden md:flex font-medium text-muted-foreground hover:text-primary"
+            >
+              Sign In
+            </Button> */}
+            <Button className="hidden md:flex font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Link href="/contact">Book a Demo</Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Open menu"
+              type="button"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -122,7 +123,7 @@ export const Header = () => {
               className="text-base font-medium text-muted-foreground hover:text-primary transition-colors py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
-              CRM Dashboard
+              CRM
             </Link>
             <Link
               href="/contact"
@@ -133,7 +134,7 @@ export const Header = () => {
             </Link>
             <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
               <Button
-                variant="ghost"
+                variant="outline"
                 className="w-full justify-start font-medium text-muted-foreground hover:text-primary"
               >
                 Sign In
