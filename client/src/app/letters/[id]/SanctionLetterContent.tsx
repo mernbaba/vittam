@@ -1,7 +1,16 @@
-import { HiOutlineArrowDownTray, HiOutlineShieldCheck } from "react-icons/hi2";
+"use client";
+
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas-pro";
+import {
+  HiOutlineArrowDownTray,
+  HiOutlinePrinter,
+  HiOutlineShieldCheck,
+} from "react-icons/hi2";
 import PrintButton from "./PrintButton";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export interface SanctionData {
   customer_id: string;
@@ -24,9 +33,11 @@ export interface SanctionData {
 const SanctionLetterContent = ({
   data,
   id,
+  logo,
 }: {
   data: SanctionData;
   id: string;
+  logo: string;
 }) => {
   const sanctionDateString = new Date(data.created_at).toLocaleDateString(
     "en-IN",
@@ -45,30 +56,91 @@ const SanctionLetterContent = ({
     year: "numeric",
   });
 
+  const handleDownloadPDF = async () => {
+    if (typeof window === "undefined") return;
+
+    const element = document.querySelector(".sanction-letter") as HTMLElement;
+    if (!element) return;
+
+    // Hide elements not for PDF
+    // const toHide: HTMLElement[] = [];
+    // element.querySelectorAll(".print-hidden").forEach((el) => {
+    //   if (el instanceof HTMLElement) {
+    //     toHide.push(el);
+    //     el.style.display = "none";
+    //   }
+    // });
+
+    const canvas = await html2canvas(element, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: "#fff",
+      logging: true,
+      allowTaint: false,
+    });
+    const imgData = canvas.toDataURL("image/jpeg", 0.98);
+
+    const pdf = new jsPDF({
+      unit: "mm",
+      format: "a4",
+      orientation: "portrait",
+    });
+
+    // Calculate width and height to fit A4
+    const a4Width = 210;
+    const a4Height = 297;
+    const imgProps = {
+      width: canvas.width,
+      height: canvas.height,
+    };
+    const pdfWidth = a4Width;
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    // Fill page with white to prevent black lines when the image is smaller than page
+    // pdf.setFillColor(255, 255, 255);
+    // pdf.rect(0, 0, a4Width, a4Height, "F");
+
+    pdf.addImage(
+      imgData,
+      "JPEG",
+      0,
+      0,
+      pdfWidth,
+      pdfHeight > a4Height ? a4Height : pdfHeight
+    );
+
+    pdf.save(`sanction-letter-${id}.pdf`);
+
+    // Restore hidden elements
+    // toHide.forEach((el) => {
+    //   el.style.display = "";
+    // });
+  };
+
   return (
     <div className="min-h-screen bg-neutral-100 p-4 md:p-8 flex flex-col items-center text-black font-sans sanction-letter-container">
       <div className="w-full max-w-[800px] flex justify-between items-center mb-6 print-hidden">
         <h1 className="text-lg font-bold">Sanction Letter</h1>
         <div className="flex gap-2">
-          {/* <PrintButton>
+          <PrintButton>
             <HiOutlinePrinter className="w-4 h-4" />
             Print Letter
-          </PrintButton> */}
-          <PrintButton>
+          </PrintButton>
+          <Button onClick={handleDownloadPDF}>
             <HiOutlineArrowDownTray className="size-4" />
             Download PDF
-          </PrintButton>
+          </Button>
         </div>
       </div>
 
-      <div className="w-full max-w-[800px] bg-white shadow-2xl print-shadow-none print-full-width flex flex-col">
+      <div className="w-full max-w-[800px] bg-white shadow-2xl print-shadow-none print-full-width flex flex-col sanction-letter">
         <div className="bg-[#1961AC] print-exact-blue text-white print-exact-white p-6 md:p-7 mb-3">
           <div className="flex justify-between items-start">
             <div className="space-y-3">
               <Image
                 width={800}
                 height={100}
-                src="https://www.tatacapital.com/online/loans/home-loans/assets/logo-dark.svg"
+                src={logo}
                 alt="Tata Capital Logo"
                 className="h-8 w-auto object-contain brightness-0 invert print-logo-invert"
               />
@@ -91,7 +163,7 @@ const SanctionLetterContent = ({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 text-[12px] leading-snug px-10 md:px-12 py-4 min-h-[80dvh] print:min-h-[85dvh]">
+        <div className="flex-1 space-y-4 text-[12px] leading-snug px-10 md:px-12 py-4 min-h-[80dvh] print:min-h-[75dvh]">
           <div className="space-y-1">
             <p className="font-bold">To,</p>
             <p className="font-bold uppercase text-base">
@@ -242,7 +314,7 @@ const SanctionLetterContent = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 mt-28">
+          <div className="flex items-center justify-between gap-4 mt-20">
             <div className="flex-1">
               <p className="text-xs italic leading-tight">
                 <span className="font-bold">Note:</span> This is an

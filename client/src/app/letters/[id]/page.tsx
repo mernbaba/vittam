@@ -7,12 +7,23 @@ async function getSanctionData(id: string) {
     await connectDB();
     const data = await Sanction.findById(id).lean();
     if (!data) return null;
+    data._id = data._id?.toString();
 
     return data;
   } catch (error) {
     console.error("Error fetching sanction data:", error);
     return null;
   }
+}
+
+async function getLogo() {
+  const imageUrl =
+    "https://www.tatacapital.com/online/loans/home-loans/assets/logo-dark.svg";
+  const response = await fetch(imageUrl);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const base64 = buffer.toString("base64");
+  const mimeType = "image/svg+xml";
+  return `data:${mimeType};base64,${base64}`;
 }
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
@@ -38,7 +49,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     );
   }
 
-  return <SanctionLetterContent data={sanction} id={id} />;
+  const logo = await getLogo();
+
+  return <SanctionLetterContent data={sanction} id={id} logo={logo} />;
 };
 
 export default Page;
