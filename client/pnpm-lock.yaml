@@ -114,8 +114,8 @@ importers:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       html2canvas-pro:
-        specifier: ^1.6.4
-        version: 1.6.4
+        specifier: ^1.6.6
+        version: 1.6.6
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -2287,8 +2287,8 @@ packages:
     resolution: {integrity: sha512-BIdolzGpDO9MQ4nu3AUuDwHZZ+KViNm+EZ75Ae55eMXMqLVhDFqEMXxtUe9Qh8hjL+pIna/frs2j6Y2yD5Ua/g==}
     engines: {node: '>=16.9.0'}
 
-  html2canvas-pro@1.6.4:
-    resolution: {integrity: sha512-VuaqBaAujT0sheyny4omQwoJKznEutgOWuYfeGiXl9iRbbLKlRejdQCdaxHyGlfQWSP74lRtYSIgMMBsggfgtg==}
+  html2canvas-pro@1.6.6:
+    resolution: {integrity: sha512-5mRhTXZhv4B0kIcsn3bFBjol2o8vzP35mhtxdXBGPA3V3gZd6Sa2PIIFbT//DiqAX8UuywlcJit5jRKej4nV4Q==}
     engines: {node: '>=16.0.0'}
 
   html2canvas@1.4.1:
@@ -5740,7 +5740,7 @@ snapshots:
 
   hono@4.10.6: {}
 
-  html2canvas-pro@1.6.4:
+  html2canvas-pro@1.6.6:
     dependencies:
       css-line-break: 2.1.0
       text-segmentation: 1.0.3
