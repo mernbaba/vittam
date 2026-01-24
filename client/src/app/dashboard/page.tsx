@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 const Page = () => {
-  redirect("/crm/users");
+  redirect("/dashboard/users");
 };
 
 export default Page;
