@@ -12,6 +12,11 @@ export async function GET() {
     await connectDB();
 
     // Parallel fetch for better performance
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
     const [
       totalRevenueResult,
       activeCustomersCount,
@@ -19,6 +24,9 @@ export async function GET() {
       applicationsCount,
       monthlyData,
       recentSessions,
+      todaysLeadsCount,
+      todaysEngagedLeadsCount,
+      todaysDeadLeadsCount,
     ] = await Promise.all([
       // 1. Total Revenue (Sum of Sanctioned User loan amounts)
       Sanction.aggregate([{ $group: { _id: null, total: { $sum: "$loan_amount" } } }]),
@@ -51,6 +59,23 @@ export async function GET() {
         .sort({ created_at: -1 })
         .limit(5)
         .lean(),
+
+      // 7. Today's Leads (all sessions created today)
+      Session.countDocuments({
+        created_at: { $gte: todayStart, $lte: todayEnd },
+      }),
+
+      // 8. Today's Engaged Leads (customer_id present)
+      Session.countDocuments({
+        created_at: { $gte: todayStart, $lte: todayEnd },
+        "metadata.customer_id": { $exists: true, $ne: null },
+      }),
+
+      // 9. Today's Dead Leads (customer_id missing)
+      Session.countDocuments({
+        created_at: { $gte: todayStart, $lte: todayEnd },
+        $or: [{ "metadata.customer_id": { $exists: false } }, { "metadata.customer_id": null }],
+      }),
     ]);
 
     // Format Monthly Data
@@ -80,6 +105,9 @@ export async function GET() {
         customers: activeCustomersCount,
         sessions: activeSessionsCount,
         applications: applicationsCount,
+        todaysLeads: todaysLeadsCount,
+        todaysEngagedLeads: todaysEngagedLeadsCount,
+        todaysDeadLeads: todaysDeadLeadsCount,
       },
       chartData,
       recentActivity: formattedRecentActivity,

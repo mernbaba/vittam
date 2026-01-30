@@ -15,6 +15,11 @@ This module provides services backed by MongoDB for:
 import logging
 from typing import Dict, Optional
 from datetime import datetime
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from database import (
     users_collection,
@@ -988,6 +993,31 @@ def create_sanction(
         # Insert into database
         result = sanctions_collection.insert_one(sanction_doc)
         sanction_id = str(result.inserted_id)
+
+        waplify_token = os.getenv("WAPLIFY_AUTH_TOKEN")
+        waba_phone_id = os.getenv("WABA_PHONE_ID")
+        to_number = os.getenv("WHATSAPP_TO_NUMBER")
+        message = f"Your loan has been sanctioned. Your sanction letter is available at https://vittam.growsoc.com/letters/{result.inserted_id}"
+
+        url = "https://app.waplify.io/api/whatsapp/send-message"
+        headers = {
+            "authorization": f"Bearer {waplify_token}",
+            "content-type": "application/json",
+        }
+        data = {
+            "waba_phone_id": waba_phone_id,
+            "to": to_number,
+            "message": message,
+            "message_type": "text",
+        }
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            logger.error(f"[SERVICE] create_sanction - Failed to send WhatsApp message: {response.text}")
+            return {
+                "success": False,
+                "message": f"Failed to send WhatsApp message: {response.text}",
+            }
+        logger.info(f"[SERVICE] create_sanction - WhatsApp message sent successfully")
 
         # Update document with sanction_id
         sanctions_collection.update_one(

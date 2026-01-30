@@ -97,6 +97,9 @@ const Page = () => {
     customers: 0,
     sessions: 0,
     applications: 0,
+    todaysLeads: 0,
+    todaysEngagedLeads: 0,
+    todaysDeadLeads: 0,
   });
   const [chartData, setChartData] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -181,6 +184,27 @@ const Page = () => {
                 value={stats.sessions.toLocaleString()}
                 description="Current user sessions"
                 icon={Activity}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <StatsCard
+                title="Today's Leads"
+                value={stats.todaysLeads.toLocaleString()}
+                description="All leads created today"
+                icon={Users}
+              />
+              <StatsCard
+                title="Engaged Leads"
+                value={stats.todaysEngagedLeads.toLocaleString()}
+                description="customer_id is not null"
+                icon={CheckCircle2}
+              />
+              <StatsCard
+                title="Dead Leads"
+                value={stats.todaysDeadLeads.toLocaleString()}
+                description="customer_id is null"
+                icon={AlertCircle}
               />
             </div>
 
